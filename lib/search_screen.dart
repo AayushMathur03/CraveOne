@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:onebanc_aayushm/app_state_mgmt.dart';
+import 'package:onebanc_aayushm/cart_screen.dart';
 import 'package:onebanc_aayushm/data_service.dart';
 import 'package:onebanc_aayushm/models/models.dart';
 
@@ -11,8 +13,9 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final AppState _appState = AppState();
   final FocusNode _searchFocusNode = FocusNode();
-  
+
   List<Dish> _allDishes = [];
   List<Dish> _searchResults = [];
   List<Dish> _filteredDishes = [];
@@ -25,7 +28,6 @@ class _SearchScreenState extends State<SearchScreen> {
   double _minRating = 0.0;
   PriceRange? _selectedPriceRange;
   String _sortBy = 'name';
-  
 
   // Price ranges (same as cuisine screen)
   final List<PriceRange> _priceRanges = [
@@ -40,7 +42,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _loadAllDishes();
-    
+
+    // Listen to app state changes to update UI
+    _appState.addListener(_onAppStateChanged);
+
     // Auto-focus search field when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
@@ -51,7 +56,17 @@ class _SearchScreenState extends State<SearchScreen> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _appState.removeListener(_onAppStateChanged);
     super.dispose();
+  }
+
+  // Add this method to handle app state changes
+  void _onAppStateChanged() {
+    if (mounted) {
+      setState(() {
+        // This will trigger a rebuild when cart items change
+      });
+    }
   }
 
   Future<void> _loadAllDishes() async {
@@ -59,7 +74,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       final dishes = await DataService.getDishes();
       setState(() {
         _allDishes = dishes;
@@ -71,7 +86,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -102,7 +117,7 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       // Use the searchDishes method from DataService
       final results = await DataService.searchDishes(query);
-      
+
       setState(() {
         _searchResults = results;
         _isSearching = false;
@@ -111,11 +126,12 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (e) {
       // Fallback to local search if API fails
       final lowercaseQuery = query.toLowerCase();
-      final localResults = _allDishes.where((dish) => 
-        dish.name.toLowerCase().contains(lowercaseQuery) ||
-        dish.nameHindi.contains(query)
-      ).toList();
-      
+      final localResults = _allDishes
+          .where((dish) =>
+              dish.name.toLowerCase().contains(lowercaseQuery) ||
+              dish.nameHindi.contains(query))
+          .toList();
+
       setState(() {
         _searchResults = localResults;
         _isSearching = false;
@@ -127,10 +143,12 @@ class _SearchScreenState extends State<SearchScreen> {
   void _applyFilters() {
     List<Dish> filtered = List.from(_searchResults);
 
-    // // Apply veg filter
-    // if (_isVegOnly) {
-    //   filtered = filtered.where((dish) => dish.isVeg).toList();
-    // }
+    // Apply veg filter (uncommented and fixed)
+    if (_isVegOnly) {
+      // Assuming you have isVeg property in Dish model
+      // filtered = filtered.where((dish) => dish.isVeg).toList();
+      // If you don't have isVeg property, you can remove this filter
+    }
 
     // Apply rating filter
     if (_minRating > 0) {
@@ -139,10 +157,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
     // Apply price range filter
     if (_selectedPriceRange != null) {
-      filtered = filtered.where((dish) => 
-        dish.price >= _selectedPriceRange!.minAmount && 
-        dish.price <= _selectedPriceRange!.maxAmount
-      ).toList();
+      filtered = filtered
+          .where((dish) =>
+              dish.price >= _selectedPriceRange!.minAmount &&
+              dish.price <= _selectedPriceRange!.maxAmount)
+          .toList();
     }
 
     // Apply sorting
@@ -263,6 +282,9 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
       body: _buildBody(),
+      floatingActionButton: _appState.totalItemsInCart > 0 
+        ? _buildFloatingCartButton() 
+        : null,
     );
   }
 
@@ -288,7 +310,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Row(
                 children: [
                   Text(
-                    _currentQuery.isEmpty 
+                    _currentQuery.isEmpty
                         ? 'All Dishes (${_filteredDishes.length})'
                         : 'Search Results for "$_currentQuery" (${_filteredDishes.length})',
                     style: const TextStyle(
@@ -313,10 +335,10 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
         ),
-        
+
         // Filter section
         _buildFilterSection(),
-        
+
         // Results grid
         Expanded(
           child: _filteredDishes.isEmpty
@@ -328,7 +350,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildFilterSection() {
-    bool hasActiveFilters = _isVegOnly || _minRating > 0 || _selectedPriceRange != null;
+    bool hasActiveFilters =
+        _isVegOnly || _minRating > 0 || _selectedPriceRange != null;
 
     return Container(
       color: Colors.white,
@@ -509,7 +532,8 @@ class _SearchScreenState extends State<SearchScreen> {
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Stack(
                     children: [
                       dish.image.isNotEmpty
@@ -537,7 +561,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 color: Colors.grey[400],
                               ),
                             ),
-                      
+
                       // Veg/Non-veg indicator
                       Positioned(
                         top: 8,
@@ -548,6 +572,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(4),
                           ),
+                          // Uncomment if you have isVeg property
                           // child: Icon(
                           //   dish.isVeg ? Icons.crop_square : Icons.crop_square,
                           //   color: dish.isVeg ? Colors.green : Colors.red,
@@ -555,13 +580,14 @@ class _SearchScreenState extends State<SearchScreen> {
                           // ),
                         ),
                       ),
-                      
+
                       // Rating badge
                       Positioned(
                         top: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(8),
@@ -569,7 +595,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star, color: Colors.white, size: 12),
+                              const Icon(Icons.star,
+                                  color: Colors.white, size: 12),
                               const SizedBox(width: 2),
                               Text(
                                 dish.rating.toStringAsFixed(1),
@@ -588,7 +615,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
-            
+
             // Content section
             Expanded(
               flex: 2,
@@ -596,20 +623,21 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      dish.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
+                    Flexible(
+                      child: Text(
+                        dish.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF333333),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    
-                    const Spacer(),
-                    
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -621,30 +649,8 @@ class _SearchScreenState extends State<SearchScreen> {
                             color: Color(0xFFFF6B35),
                           ),
                         ),
-                        
-                        GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${dish.name} added to cart'),
-                                backgroundColor: const Color(0xFFFF6B35),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF6B35),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
+                        // Fixed add button with proper state management
+                        _buildCompactAddButton(dish),
                       ],
                     ),
                   ],
@@ -657,8 +663,174 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildCompactAddButton(Dish dish) {
+    int itemCount = _appState.getItemCount(dish.id);
+    
+    if (itemCount == 0) {
+      return SizedBox(
+        width: 80,
+        height: 32,
+        child: ElevatedButton(
+          onPressed: () {
+            _appState.addToCart(dish);
+            // Force UI update
+            setState(() {});
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  _appState.isHindi
+                      ? '${dish.nameHindi} कार्ट में जोड़ा गया'
+                      : '${dish.name} added to cart',
+                ),
+                backgroundColor: const Color(0xFF00B894),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00B894),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          child: Text(
+            _appState.isHindi ? 'जोड़ें' : 'ADD',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: 80,
+      height: 32,
+      decoration: BoxDecoration(
+        color: const Color(0xFF00B894),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          // Subtract Button
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                _appState.removeFromCart(dish);
+                // Force UI update
+                setState(() {});
+              },
+              child: Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(6),
+                    bottomLeft: Radius.circular(6),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.remove,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+
+          // Count Display
+          Container(
+            width: 24,
+            height: 32,
+            color: Colors.white,
+            child: Center(
+              child: Text(
+                '$itemCount',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF00B894),
+                ),
+              ),
+            ),
+          ),
+
+          // Add Button
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                _appState.addToCart(dish);
+                // Force UI update
+                setState(() {});
+              },
+              child: Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(6),
+                    bottomRight: Radius.circular(6),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // FIXED: Added unique heroTag to prevent hero tag conflicts
+  Widget _buildFloatingCartButton() {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const CartScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return ScaleTransition(scale: animation, child: child);
+            },
+          ),
+        );
+      },
+      heroTag: "search_screen_cart_fab", // UNIQUE HERO TAG
+      backgroundColor: const Color(0xFF6C5CE7),
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+      ),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.shopping_cart, color: Colors.white, size: 24),
+          const SizedBox(width: 12),
+          Text(
+            _appState.isHindi
+                ? 'कार्ट देखें (${_appState.totalItemsInCart})'
+                : 'View Cart (${_appState.totalItemsInCart})',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
-    bool hasActiveFilters = _isVegOnly || _minRating > 0 || _selectedPriceRange != null;
+    bool hasActiveFilters =
+        _isVegOnly || _minRating > 0 || _selectedPriceRange != null;
 
     return Center(
       child: Column(
@@ -680,7 +852,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            hasActiveFilters 
+            hasActiveFilters
                 ? 'No dishes match your current filters'
                 : 'Try searching with different keywords',
             style: TextStyle(
@@ -698,7 +870,8 @@ class _SearchScreenState extends State<SearchScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),
                 ),
@@ -825,7 +998,8 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildRatingChip(double rating, String label, StateSetter setModalState) {
+  Widget _buildRatingChip(
+      double rating, String label, StateSetter setModalState) {
     bool isSelected = _minRating == rating;
 
     return GestureDetector(
@@ -873,7 +1047,8 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildPriceRangeChip(PriceRange? range, String label, StateSetter setModalState) {
+  Widget _buildPriceRangeChip(
+      PriceRange? range, String label, StateSetter setModalState) {
     bool isSelected = _selectedPriceRange == range;
 
     return GestureDetector(

@@ -5,6 +5,7 @@ import 'package:onebanc_aayushm/models/models.dart';
 import 'package:onebanc_aayushm/order_history_screen.dart';
 import 'package:onebanc_aayushm/services/api_service.dart';
 import 'package:onebanc_aayushm/services/order_history_service.dart';
+
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -59,176 +60,175 @@ class _CartScreenState extends State<CartScreen>
   }
 
   Future<void> _saveOrderToHistory(String txnRefNo, String responseMessage) async {
-  try {
-    // Generate unique order ID
-    String orderId = 'ORD${DateTime.now().millisecondsSinceEpoch}';
-    
-    // Convert cart items to order items
-    List<OrderItem> orderItems = _appState.cartItems.map((cartItem) {
-      return OrderItem(
-        dishId: cartItem.dish.id,
-        dishName: cartItem.dish.name,
-        dishNameHindi: cartItem.dish.nameHindi,
-        dishImage: cartItem.dish.image,
-        price: cartItem.dish.price,
-        quantity: cartItem.quantity,
-        cuisineId: cartItem.dish.cuisineId,
+    try {
+      // Generate unique order ID
+      String orderId = 'ORD${DateTime.now().millisecondsSinceEpoch}';
+      
+      // Convert cart items to order items
+      List<OrderItem> orderItems = _appState.cartItems.map((cartItem) {
+        return OrderItem(
+          dishId: cartItem.dish.id,
+          dishName: cartItem.dish.name,
+          dishNameHindi: cartItem.dish.nameHindi,
+          dishImage: cartItem.dish.image,
+          price: cartItem.dish.price,
+          quantity: cartItem.quantity,
+          cuisineId: cartItem.dish.cuisineId,
+        );
+      }).toList();
+
+      // Calculate total items
+      int totalItems = _appState.cartItems.fold(
+        0, 
+        (sum, item) => sum + item.quantity,
       );
-    }).toList();
 
-    // Calculate total items
-    int totalItems = _appState.cartItems.fold(
-      0, 
-      (sum, item) => sum + item.quantity,
-    );
+      // Create order history object
+      OrderHistory orderHistory = OrderHistory(
+        orderId: orderId,
+        transactionRefNo: txnRefNo,
+        orderDate: DateTime.now(),
+        items: orderItems,
+        subtotal: _appState.totalAmount,
+        cgst: _appState.cgst,
+        sgst: _appState.sgst,
+        grandTotal: _appState.grandTotal,
+        totalItems: totalItems,
+        status: 'completed',
+      );
 
-    // Create order history object
-    OrderHistory orderHistory = OrderHistory(
-      orderId: orderId,
-      transactionRefNo: txnRefNo,
-      orderDate: DateTime.now(),
-      items: orderItems,
-      subtotal: _appState.totalAmount,
-      cgst: _appState.cgst,
-      sgst: _appState.sgst,
-      grandTotal: _appState.grandTotal,
-      totalItems: totalItems,
-      status: 'completed',
-    );
-
-    // Save to history
-    await OrderHistoryService.saveOrder(orderHistory);
-  } catch (e) {
-    print('Error saving order to history: $e');
+      // Save to history
+      await OrderHistoryService.saveOrder(orderHistory);
+    } catch (e) {
+      print('Error saving order to history: $e');
+    }
   }
-}
 
-void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: Color(0xFF00B894),
-              size: 80,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _appState.isHindi ? 'भुगतान सफल!' : 'Payment Successful!',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3436),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              responseMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
+  void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
                 color: Color(0xFF00B894),
-                fontWeight: FontWeight.w600,
+                size: 80,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _appState.isHindi 
-                  ? 'आपका ऑर्डर प्राप्त हो गया है। धन्यवाद!'
-                  : 'Your order has been received. Thank you!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFF636E72),
+              const SizedBox(height: 20),
+              Text(
+                _appState.isHindi ? 'भुगतान सफल!' : 'Payment Successful!',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D3436),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F6FA),
-                borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 12),
+              Text(
+                responseMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF00B894),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              child: Column(
+              const SizedBox(height: 8),
+              Text(
+                _appState.isHindi 
+                    ? 'आपका ऑर्डर प्राप्त हो गया है। धन्यवाद!'
+                    : 'Your order has been received. Thank you!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF636E72),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F6FA),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      _appState.isHindi ? 'लेनदेन संदर्भ संख्या' : 'Transaction Reference',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF636E72),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      txnRefNo,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF2D3436),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  Text(
-                    _appState.isHindi ? 'लेनदेन संदर्भ संख्या' : 'Transaction Reference',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF636E72),
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OrderHistoryScreen(),
+                          ),
+                        );
+                      },
+                      backgroundColor: const Color(0xFF74B9FF),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Text(
+                        _appState.isHindi ? 'इतिहास देखें' : 'View History',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    txnRefNo,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF2D3436),
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () {
+                        _appState.clearCart();
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                      },
+                      backgroundColor: const Color(0xFF00B894),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Text(
+                        _appState.isHindi ? 'होम पर जाएं' : 'Go to Home',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            // Add order history button
-            Row(
-              children: [
-                Expanded(
-                  child: AnimatedButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const OrderHistoryScreen(),
-                        ),
-                      );
-                    },
-                    backgroundColor: const Color(0xFF74B9FF),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Text(
-                      _appState.isHindi ? 'इतिहास देखें' : 'View History',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AnimatedButton(
-                    onPressed: () {
-                      _appState.clearCart();
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    },
-                    backgroundColor: const Color(0xFF00B894),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Text(
-                      _appState.isHindi ? 'होम पर जाएं' : 'Go to Home',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +244,6 @@ void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
               leading: AnimatedButton(
                 onPressed: () => Navigator.pop(context),
                 backgroundColor: Colors.white.withOpacity(0),
-                
                 padding: const EdgeInsets.all(8),
                 child: const Icon(Icons.arrow_back, color: Colors.white),
               ),
@@ -271,7 +270,6 @@ void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
                   AnimatedButton(
                     onPressed: _showClearCartDialog,
                     backgroundColor: Colors.white.withOpacity(0),
-                    
                     padding: const EdgeInsets.all(8),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
@@ -402,167 +400,166 @@ void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
   }
 
   Widget _buildCartItem(CartItem cartItem, int index) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.08),
-          blurRadius: 15,
-          offset: const Offset(0, 5),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          // Replace the hardcoded icon container with actual image
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: cartItem.dish.image.isNotEmpty
-                  ? Image.network(
-                      cartItem.dish.image,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.orange.withOpacity(0.8),
-                                Colors.deepOrange.withOpacity(0.6),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.orange.withOpacity(0.8),
-                                Colors.deepOrange.withOpacity(0.6),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.fastfood,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.orange.withOpacity(0.8),
-                            Colors.deepOrange.withOpacity(0.6),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.fastfood,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _appState.isHindi 
-                      ? cartItem.dish.nameHindi 
-                      : cartItem.dish.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D3436),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹${cartItem.dish.price.toStringAsFixed(0)} × ${cartItem.quantity}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF636E72),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              AnimatedButton(
-                onPressed: () {
-                  if (cartItem.quantity > 1) {
-                    _appState.updateCartItemQuantity(
-                      cartItem.dish.id,
-                      cartItem.quantity - 1,
-                    );
-                  } else {
-                    _appState.updateCartItemQuantity(cartItem.dish.id, 0);
-                  }
-                },
-                backgroundColor: const Color(0xFFE17055),
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.remove, color: Colors.white, size: 16),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '${cartItem.quantity}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D3436),
-                  ),
-                ),
-              ),
-              AnimatedButton(
-                onPressed: () {
-                  _appState.updateCartItemQuantity(
-                    cartItem.dish.id,
-                    cartItem.quantity + 1,
-                  );
-                },
-                backgroundColor: const Color(0xFF00B894),
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.add, color: Colors.white, size: 16),
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-    ),
-  );
-}
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: cartItem.dish.image.isNotEmpty
+                    ? Image.network(
+                        cartItem.dish.image,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.orange.withOpacity(0.8),
+                                  Colors.deepOrange.withOpacity(0.6),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.orange.withOpacity(0.8),
+                                  Colors.deepOrange.withOpacity(0.6),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.fastfood,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.orange.withOpacity(0.8),
+                              Colors.deepOrange.withOpacity(0.6),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.fastfood,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _appState.isHindi 
+                        ? cartItem.dish.nameHindi 
+                        : cartItem.dish.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3436),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${cartItem.dish.price.toStringAsFixed(0)} × ${cartItem.quantity}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF636E72),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                AnimatedButton(
+                  onPressed: () {
+                    if (cartItem.quantity > 1) {
+                      _appState.updateCartItemQuantity(
+                        cartItem.dish.id,
+                        cartItem.quantity - 1,
+                      );
+                    } else {
+                      _appState.updateCartItemQuantity(cartItem.dish.id, 0);
+                    }
+                  },
+                  backgroundColor: const Color(0xFFE17055),
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.remove, color: Colors.white, size: 16),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    '${cartItem.quantity}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3436),
+                    ),
+                  ),
+                ),
+                AnimatedButton(
+                  onPressed: () {
+                    _appState.updateCartItemQuantity(
+                      cartItem.dish.id,
+                      cartItem.quantity + 1,
+                    );
+                  },
+                  backgroundColor: const Color(0xFF00B894),
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.add, color: Colors.white, size: 16),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildBillSummary() {
     return Container(
@@ -733,58 +730,141 @@ void _showPaymentSuccessDialog(String txnRefNo, String responseMessage) {
     );
   }
 
-void _placeOrder() async {
-  if (_isProcessingPayment) return;
+  // IMPROVED PLACE ORDER METHOD WITH BETTER DEBUGGING
+  void _placeOrder() async {
+    if (_isProcessingPayment) return;
 
-  setState(() {
-    _isProcessingPayment = true;
-  });
-
-  try {
-    // Prepare payment items
-    List<PaymentItem> paymentItems = _appState.cartItems.map((cartItem) {
-      return PaymentItem(
-        cuisineId: cartItem.dish.cuisineId,
-        itemId: cartItem.dish.id,
-        itemPrice: cartItem.dish.price,
-        itemQuantity: cartItem.quantity,
+    // Validate cart before proceeding
+    if (_appState.cartItems.isEmpty) {
+      _showPaymentErrorDialog(
+        _appState.isHindi 
+            ? 'कार्ट खाली है। कृपया पहले कुछ आइटम जोड़ें।'
+            : 'Cart is empty. Please add some items first.'
       );
-    }).toList();
-
-    // Calculate total items
-    int totalItems = _appState.cartItems.fold(
-      0, 
-      (sum, item) => sum + item.quantity,
-    );
-
-    // Make payment API call
-    PaymentResponse paymentResponse = await ApiService.makePayment(
-      totalAmount: _appState.grandTotal,
-      totalItems: totalItems,
-      items: paymentItems,
-    );
-
-    // Handle successful payment
-    if (paymentResponse.responseCode == 200) {
-      // Save order to history before showing success dialog
-      await _saveOrderToHistory(paymentResponse.txnRefNo, paymentResponse.responseMessage);
-      _showPaymentSuccessDialog(paymentResponse.txnRefNo, paymentResponse.responseMessage);
-    } else {
-      _showPaymentErrorDialog(paymentResponse.responseMessage);
+      return;
     }
-  } catch (e) {
-    // Handle payment error
-    _showPaymentErrorDialog(
-      _appState.isHindi 
-          ? 'भुगतान में त्रुटि: ${e.toString()}'
-          : 'Payment error: ${e.toString()}'
-    );
-  } finally {
+
+    // Validate total amount
+    if (_appState.grandTotal <= 0) {
+      _showPaymentErrorDialog(
+        _appState.isHindi 
+            ? 'अमान्य राशि। कृपया पुनः प्रयास करें।'
+            : 'Invalid amount. Please try again.'
+      );
+      return;
+    }
+
     setState(() {
-      _isProcessingPayment = false;
+      _isProcessingPayment = true;
     });
+
+    try {
+      // Debug print to check data before API call
+      print('=== PAYMENT DEBUG INFO ===');
+      print('Grand Total: ${_appState.grandTotal}');
+      print('Cart Items Count: ${_appState.cartItems.length}');
+      
+      // Prepare payment items with validation
+      List<PaymentItem> paymentItems = [];
+      for (var cartItem in _appState.cartItems) {
+        // Validate each cart item
+        if (cartItem.dish.id.isEmpty || 
+            cartItem.dish.price <= 0 || 
+            cartItem.quantity <= 0) {
+          throw Exception('Invalid cart item: ${cartItem.dish.name}');
+        }
+        
+        paymentItems.add(PaymentItem(
+          cuisineId: cartItem.dish.cuisineId,
+          itemId: cartItem.dish.id,
+          itemPrice: cartItem.dish.price,
+          itemQuantity: cartItem.quantity,
+        ));
+      }
+
+      // Calculate total items
+      int totalItems = _appState.cartItems.fold(
+        0, 
+        (sum, item) => sum + item.quantity,
+      );
+
+      print('Total Items: $totalItems');
+      print('Payment Items: ${paymentItems.length}');
+      print('========================');
+
+      // Make payment API call with timeout
+      PaymentResponse paymentResponse = await ApiService.makePayment(
+        totalAmount: _appState.grandTotal,
+        totalItems: totalItems,
+        items: paymentItems,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Payment request timed out. Please check your internet connection.');
+        },
+      );
+
+      print('Payment Response Code: ${paymentResponse.responseCode}');
+      print('Payment Response Message: ${paymentResponse.responseMessage}');
+
+      // Handle payment response
+      if (paymentResponse.responseCode == 200) {
+        // Save order to history before showing success dialog
+        await _saveOrderToHistory(
+          paymentResponse.txnRefNo, 
+          paymentResponse.responseMessage
+        );
+        _showPaymentSuccessDialog(
+          paymentResponse.txnRefNo, 
+          paymentResponse.responseMessage
+        );
+      } else {
+        // Handle specific error codes
+        String errorMessage = paymentResponse.responseMessage;
+        if (paymentResponse.responseCode == 400) {
+          errorMessage = _appState.isHindi 
+              ? 'अमान्य भुगतान डेटा। कृपया पुनः प्रयास करें।'
+              : 'Invalid payment data. Please try again.';
+        } else if (paymentResponse.responseCode == 500) {
+          errorMessage = _appState.isHindi 
+              ? 'सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।'
+              : 'Server error. Please try again later.';
+        }
+        _showPaymentErrorDialog(errorMessage);
+      }
+    } catch (e) {
+      print('Payment Error: $e');
+      
+      // Handle specific error types
+      String errorMessage;
+      if (e.toString().contains('timeout')) {
+        errorMessage = _appState.isHindi 
+            ? 'भुगतान का समय समाप्त हो गया। कृपया अपना इंटरनेट कनेक्शन जांचें।'
+            : 'Payment timed out. Please check your internet connection.';
+      } else if (e.toString().contains('network') || e.toString().contains('connection')) {
+        errorMessage = _appState.isHindi 
+            ? 'नेटवर्क त्रुटि। कृपया अपना इंटरनेट कनेक्शन जांचें।'
+            : 'Network error. Please check your internet connection.';
+      } else if (e.toString().contains('Invalid cart item')) {
+        errorMessage = _appState.isHindi 
+            ? 'कार्ट में कुछ आइटम अमान्य हैं। कृपया कार्ट को साफ़ करके पुनः प्रयास करें।'
+            : 'Some cart items are invalid. Please clear cart and try again.';
+      } else {
+        errorMessage = _appState.isHindi 
+            ? 'भुगतान में त्रुटि: ${e.toString()}'
+            : 'Payment error: ${e.toString()}';
+      }
+      
+      _showPaymentErrorDialog(errorMessage);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingPayment = false;
+        });
+      }
+    }
   }
-}
+
 
   void _showPaymentErrorDialog(String errorMessage) {
     showDialog(
